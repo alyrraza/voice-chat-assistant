@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 @with_retry(max_attempts=3, base_delay=1.0)
-def synthesize_html(text: str) -> str:
-    """Converts text to speech and returns an autoplaying HTML <audio> snippet.
+def synthesize_audio_bytes(text: str) -> bytes:
+    """Converts text to speech and returns raw WAV audio bytes.
 
     Raises requests.HTTPError if Deepgram returns a non-2xx response — the
     retry decorator will retry transient failures before giving up.
@@ -26,8 +26,12 @@ def synthesize_html(text: str) -> str:
         config.DEEPGRAM_TTS_URL, headers=headers, json={"text": text}, timeout=15
     )
     response.raise_for_status()
+    return response.content
 
-    audio_base64 = base64.b64encode(response.content).decode("utf-8")
+
+def synthesize_html(text: str) -> str:
+    """Converts text to speech and returns an autoplaying HTML <audio> snippet."""
+    audio_base64 = base64.b64encode(synthesize_audio_bytes(text)).decode("utf-8")
     return f"""
         <audio autoplay>
             <source src="data:audio/wav;base64,{audio_base64}" type="audio/wav">
