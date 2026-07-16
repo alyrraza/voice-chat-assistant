@@ -1,0 +1,128 @@
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+header h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+.subtitle {
+  margin: 0;
+  opacity: 0.65;
+  font-size: 14px;
+}
+
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  min-height: 320px;
+  border-radius: 12px;
+  background: rgba(127, 127, 127, 0.08);
+  margin-bottom: 12px;
+  overflow-y: auto;
+}
+
+.bubble-row {
+  display: flex;
+}
+
+.bubble-row.user {
+  justify-content: flex-end;
+}
+
+.bubble-row.assistant {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.4;
+  font-size: 15px;
+  white-space: pre-wrap;
+}
+
+.bubble.user {
+  background: linear-gradient(45deg, #4776e6, #8e54e9);
+  color: white;
+}
+
+.bubble.assistant {
+  background: rgba(127, 127, 127, 0.18);
+}
+
+.bubble.thinking {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.error-banner {
+  background: rgba(255, 75, 75, 0.15);
+  color: #ff4b4b;
+  border: 1px solid rgba(255, 75, 75, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.controls input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+}
+
+.controls button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  background: rgba(127, 127, 127, 0.18);
+  color: inherit;
+}
+
+.controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.record-btn.recording {
+  background: linear-gradient(45deg, #ff4b4b, #ff8a4b);
+  color: white;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.controls button[type="submit"] {
+  background: linear-gradient(45deg, #4776e6, #8e54e9);
+  color: white;
+}
