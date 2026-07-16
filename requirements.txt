@@ -1,0 +1,7 @@
+streamlit
+sounddevice
+numpy
+websockets>=12
+requests
+python-dotenv
+groq
