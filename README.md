@@ -1,52 +1,61 @@
 # 🎙️ Voice Chat Assistant
 
-A real-time voice assistant in the browser: speak into your mic, get a live
-transcript, a conversational LLM reply, and a spoken response back — all
-through a Streamlit app, no local models or GPU required.
+A real-time voice assistant: speak, get a live transcript, a conversational
+LLM reply, and a spoken response back — entirely via cloud APIs, no local
+models or GPU required.
 
-**Speech-to-text → LLM → Text-to-speech, entirely via cloud APIs.**
+**Speech-to-text → LLM → Text-to-speech.**
+
+The project ships as **two frontends over the same backend logic**:
+
+| Flavor | Frontend | Mic capture | Deployable live? |
+|---|---|---|---|
+| **Local** | Streamlit (`app.py`) | Server-side (`sounddevice`) | No — mic is on whatever machine runs the server |
+| **Web** | React + Vite (`frontend/`) | Browser (`MediaRecorder`) | Yes — deployed on Vercel |
+
+Server-side mic capture only works when "server" and "your laptop" are the
+same machine. The React/Vercel flavor records audio in the *visitor's*
+browser instead, so it works for anyone hitting the live URL — see
+[Evolution](#evolution) for why both exist.
 
 ## Features
 
-- 🎤 Live voice recording with one-click Start/Stop
+- 🎤 Voice recording (one-click record/stop, in-browser for the web flavor)
 - ⌨️ Text input fallback — type instead of speak, useful for demos
 - 💬 Full conversational memory (the assistant sees the whole chat history, not just your last message)
-- 🔊 Spoken replies with an autoplay/replay control
-- ⚙️ Sidebar shows whether your API keys are configured
+- 🔊 Spoken replies, autoplayed
 - 🛡️ Retry-with-backoff on external API calls, structured logging, and a unit test suite
 
 ## Architecture
 
 ```
-🎤 Mic audio  ──(sounddevice)──▶  Deepgram STT (websocket, streaming)
+Streamlit flavor (local):
+🎤 Mic ──(sounddevice)──▶ Deepgram STT (websocket, streaming) ──▶ Groq LLM ──▶ Deepgram TTS ──▶ 🔊
+
+React/Vercel flavor (live):
+🎤 Mic ──(browser MediaRecorder)──▶ POST /api/transcribe ──▶ Deepgram STT (prerecorded)
+                                                                      │
+                            POST /api/chat {messages} ──▶ Groq LLM ◀─┘
                                           │
-                                          ▼
-                                   Transcript text
-                                          │
-                                          ▼
-                              Groq LLM (chat completion,
-                              full conversation history)
-                                          │
-                                          ▼
-                                    Reply text
-                                          │
-                                          ▼
-                              Deepgram TTS ──▶ 🔊 Spoken reply
+                            POST /api/speak {text} ──▶ Deepgram TTS ──▶ 🔊
 ```
 
-All three integrations are thin, isolated modules under `services/`:
+Both flavors share the same `services/` package — no duplicated logic:
 
-| File | Responsibility |
-|---|---|
-| `services/config.py` | Loads API keys/settings from `.env` |
-| `services/stt.py` | Mic capture + streaming speech-to-text |
-| `services/llm.py` | Chat completion via Groq |
-| `services/tts.py` | Text-to-speech via Deepgram |
-| `services/retry.py` | Retry-with-backoff decorator for flaky external calls |
-| `services/logging_config.py` | One-line structured logging setup |
-| `app.py` | Streamlit UI that wires it all together |
+| File | Responsibility | Used by |
+|---|---|---|
+| `services/config.py` | Loads API keys/settings from env | both |
+| `services/stt.py` | Mic capture + streaming speech-to-text | Streamlit |
+| `services/stt_batch.py` | Prerecorded speech-to-text (no mic access needed) | Vercel API |
+| `services/llm.py` | Chat completion via Groq | both |
+| `services/tts.py` | Text-to-speech via Deepgram | both |
+| `services/retry.py` | Retry-with-backoff decorator for flaky external calls | both |
+| `services/logging_config.py` | One-line structured logging setup | Streamlit |
+| `app.py` | Streamlit UI | Streamlit flavor |
+| `api/*.py` | Vercel Python serverless endpoints | Web flavor |
+| `frontend/` | Vite + React UI | Web flavor |
 
-## Setup
+## Run locally (Streamlit flavor)
 
 1. **Clone the repo**
    ```bash
@@ -54,26 +63,47 @@ All three integrations are thin, isolated modules under `services/`:
    cd voice-chat-assistant
    ```
 
-2. **Create a virtual environment** (keeps dependencies out of your global Python)
+2. **Create a virtual environment**
    ```bash
    python -m venv .venv
    .venv\Scripts\activate      # Windows
    source .venv/bin/activate   # macOS/Linux
    ```
 
-3. **Install dependencies**
+3. **Install dependencies and add API keys**
    ```bash
    pip install -r requirements.txt
    ```
-
-4. **Add your API keys** — copy `.env.example` to `.env` and fill in:
+   Copy `.env.example` to `.env` and fill in:
    - `DEEPGRAM_API_KEY` — free at [console.deepgram.com](https://console.deepgram.com)
    - `GROQ_API_KEY` — free at [console.groq.com/keys](https://console.groq.com/keys)
 
-5. **Run it**
+4. **Run it**
    ```bash
    streamlit run app.py
    ```
+
+## Run locally (React flavor)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Voice recording needs the `/api/*` endpoints, so for a fully working local
+preview use the [Vercel CLI](https://vercel.com/docs/cli)'s `vercel dev`
+from the project root instead — it runs the React app and the Python
+functions together.
+
+## Deploy the React flavor on Vercel
+
+1. Go to [vercel.com/new](https://vercel.com/new) and import this GitHub repo.
+2. In **Project Settings → Environment Variables**, add `DEEPGRAM_API_KEY`
+   and `GROQ_API_KEY` (same keys as your local `.env`).
+3. Deploy — `vercel.json` at the repo root tells Vercel to build
+   `frontend/` and serve `api/*.py` as Python serverless functions on the
+   same domain.
 
 ## Running tests
 
@@ -82,9 +112,9 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-Tests mock all external API calls — no network access or real API keys needed.
-A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the same suite
-on every push and pull request.
+Tests mock all external API calls — no network access or real API keys
+needed. A GitHub Actions workflow (`.github/workflows/tests.yml`) runs the
+same suite on every push and pull request.
 
 ## Evolution
 
@@ -94,15 +124,21 @@ offline text-to-speech. It later grew a Streamlit front end
 (`legacy/streamlit_ollama_prototype.py`) with Deepgram handling both speech-to-text
 and text-to-speech, while the LLM stayed local via Ollama.
 
-The current version drops the local LLM entirely in favor of **Groq**:
-- No GPU or multi-GB model download required
-- Fast enough for natural back-and-forth conversation on a laptop with no
-  dedicated graphics card
-- Deployable as a live web demo (a locally-run Ollama instance can't be)
+The next version (`app.py`) dropped the local LLM for **Groq** — no GPU or
+multi-GB model download required, and fast enough for natural conversation
+on a laptop with no dedicated graphics card. But it still captured audio
+server-side via `sounddevice`, which only works when the server *is* your
+own laptop — not something you can put a link to.
 
-The original prototypes are kept in `legacy/` (API keys redacted) as a record
-of how the project evolved.
+The current web flavor (`frontend/` + `api/`) fixes that: the browser
+records audio (so it works for anyone visiting the deployed site) and a
+small set of stateless Vercel serverless functions handle STT/LLM/TTS,
+reusing the exact same `services/` code the Streamlit app already proved
+out.
+
+The original prototypes are kept in `legacy/` (API keys redacted) as a
+record of how the project evolved.
 
 ## Tech stack
 
-Streamlit · Deepgram (STT + TTS) · Groq (LLM) · sounddevice · pytest
+Streamlit · React · Vite · Vercel (serverless Python functions) · Deepgram (STT + TTS) · Groq (LLM) · sounddevice · pytest
