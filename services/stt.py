@@ -1,6 +1,7 @@
 """Live microphone capture + streaming speech-to-text via Deepgram."""
 import asyncio
 import json
+import logging
 import queue
 import threading
 
@@ -8,6 +9,8 @@ import sounddevice as sd
 import websockets
 
 from . import config
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceRecorder:
@@ -35,6 +38,7 @@ class VoiceRecorder:
         self._recording.set()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        logger.info("Recording started")
 
     def stop(self) -> str:
         """Stops recording and returns the full transcript collected so far."""
@@ -46,7 +50,9 @@ class VoiceRecorder:
         fragments = []
         while not self._transcript_queue.empty():
             fragments.append(self._transcript_queue.get_nowait())
-        return " ".join(fragments).strip()
+        transcript = " ".join(fragments).strip()
+        logger.info("Recording stopped, transcript: %r", transcript)
+        return transcript
 
     @property
     def error(self) -> str | None:

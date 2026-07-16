@@ -6,7 +6,10 @@ text-to-speech. See services/ for the individual integrations.
 import streamlit as st
 
 from services import config, llm, tts
+from services.logging_config import setup_logging
 from services.stt import VoiceRecorder
+
+setup_logging()
 
 st.set_page_config(page_title="Voice Chat Assistant", page_icon="🎙️", layout="centered")
 
