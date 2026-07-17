@@ -33,12 +33,17 @@ Streamlit flavor (local):
 🎤 Mic ──(sounddevice)──▶ Deepgram STT (websocket, streaming) ──▶ Groq LLM ──▶ Deepgram TTS ──▶ 🔊
 
 React/Vercel flavor (live):
-🎤 Mic ──(browser MediaRecorder)──▶ POST /api/transcribe ──▶ Deepgram STT (prerecorded)
-                                                                      │
-                            POST /api/chat {messages} ──▶ Groq LLM ◀─┘
+🎤 Mic ──(browser MediaRecorder)──▶ POST /api/index?action=transcribe ──▶ Deepgram STT (prerecorded)
+                                                                                    │
+                            POST /api/index?action=chat {messages} ──▶ Groq LLM ◀──┘
                                           │
-                            POST /api/speak {text} ──▶ Deepgram TTS ──▶ 🔊
+                            POST /api/index?action=speak {text} ──▶ Deepgram TTS ──▶ 🔊
 ```
+
+`api/index.py` is Vercel's single required Python entrypoint (declared in
+`pyproject.toml`) — it routes internally by the `action` query param rather
+than being three separate files, since Vercel's Python runtime only allows
+one entrypoint per project.
 
 Both flavors share the same `services/` package — no duplicated logic:
 
@@ -52,7 +57,7 @@ Both flavors share the same `services/` package — no duplicated logic:
 | `services/retry.py` | Retry-with-backoff decorator for flaky external calls | both |
 | `services/logging_config.py` | One-line structured logging setup | Streamlit |
 | `app.py` | Streamlit UI | Streamlit flavor |
-| `api/*.py` | Vercel Python serverless endpoints | Web flavor |
+| `api/index.py` | Vercel Python serverless entrypoint (chat/transcribe/speak routes) | Web flavor |
 | `frontend/` | Vite + React UI | Web flavor |
 
 ## Run locally (Streamlit flavor)
