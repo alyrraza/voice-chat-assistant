@@ -47,7 +47,7 @@ function App() {
   async function handleAudioBlob(blob) {
     setIsProcessing(true)
     try {
-      const res = await fetch('/api/transcribe', {
+      const res = await fetch('/api/index?action=transcribe', {
         method: 'POST',
         headers: { 'Content-Type': blob.type || 'audio/webm' },
         body: blob,
@@ -74,7 +74,7 @@ function App() {
     setError(null)
 
     try {
-      const chatRes = await fetch('/api/chat', {
+      const chatRes = await fetch('/api/index?action=chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
@@ -85,7 +85,7 @@ function App() {
       const withReply = [...nextMessages, { role: 'assistant', content: chatData.reply }]
       setMessages(withReply)
 
-      const speakRes = await fetch('/api/speak', {
+      const speakRes = await fetch('/api/index?action=speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: chatData.reply }),
