@@ -33,14 +33,14 @@ Streamlit flavor (local):
 🎤 Mic ──(sounddevice)──▶ Deepgram STT (websocket, streaming) ──▶ Groq LLM ──▶ Deepgram TTS ──▶ 🔊
 
 React/Vercel flavor (live):
-🎤 Mic ──(browser MediaRecorder)──▶ POST /api/index?action=transcribe ──▶ Deepgram STT (prerecorded)
+🎤 Mic ──(browser MediaRecorder)──▶ POST /api/backend?action=transcribe ──▶ Deepgram STT (prerecorded)
                                                                                     │
-                            POST /api/index?action=chat {messages} ──▶ Groq LLM ◀──┘
+                            POST /api/backend?action=chat {messages} ──▶ Groq LLM ◀──┘
                                           │
-                            POST /api/index?action=speak {text} ──▶ Deepgram TTS ──▶ 🔊
+                            POST /api/backend?action=speak {text} ──▶ Deepgram TTS ──▶ 🔊
 ```
 
-`frontend/api/index.py` is the Vercel Python serverless function — it lives
+`frontend/api/backend.py` is the Vercel Python serverless function — it lives
 *inside* `frontend/` (Vercel's Root Directory for this project) so it
 deploys correctly regardless of monorepo routing quirks, and is
 deliberately self-contained (no import from the repo-root `services/`
@@ -57,7 +57,7 @@ by the `action` query param rather than being three separate files.
 | `services/retry.py` | Retry-with-backoff decorator for flaky external calls | Streamlit |
 | `services/logging_config.py` | One-line structured logging setup | Streamlit |
 | `app.py` | Streamlit UI | Streamlit flavor |
-| `frontend/api/index.py` | Self-contained Vercel Python function (chat/transcribe/speak routes) | Web flavor |
+| `frontend/api/backend.py` | Self-contained Vercel Python function (chat/transcribe/speak routes) | Web flavor |
 | `frontend/` | Vite + React UI | Web flavor |
 
 ## Run locally (Streamlit flavor)
@@ -106,7 +106,7 @@ function together.
 1. Go to [vercel.com/new](https://vercel.com/new) and import this GitHub repo.
 2. In **Project Settings → General → Root Directory**, set it to `frontend`.
    This is required — `frontend/` has its own `package.json` (for the Vite
-   build) and `frontend/api/index.py` (the serverless function), and Vercel
+   build) and `frontend/api/backend.py` (the serverless function), and Vercel
    needs Root Directory pointed there to pick both up automatically.
 3. In **Project Settings → Environment Variables**, add `DEEPGRAM_API_KEY`
    and `GROQ_API_KEY` (same keys as your local `.env`).
@@ -138,11 +138,10 @@ on a laptop with no dedicated graphics card. But it still captured audio
 server-side via `sounddevice`, which only works when the server *is* your
 own laptop — not something you can put a link to.
 
-The current web flavor (`frontend/` + `api/`) fixes that: the browser
-records audio (so it works for anyone visiting the deployed site) and a
-small set of stateless Vercel serverless functions handle STT/LLM/TTS,
-reusing the exact same `services/` code the Streamlit app already proved
-out.
+The current web flavor (`frontend/`) fixes that: the browser records audio
+(so it works for anyone visiting the deployed site) and a single stateless
+Vercel Python function (`frontend/api/backend.py`) handles STT/LLM/TTS,
+built on the same STT/LLM/TTS logic the Streamlit app already proved out.
 
 The original prototypes are kept in `legacy/` (API keys redacted) as a
 record of how the project evolved.
