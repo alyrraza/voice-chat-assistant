@@ -13,3 +13,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal notes, not for the repo
+portfolio-cv-notes.md
