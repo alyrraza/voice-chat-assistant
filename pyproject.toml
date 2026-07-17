@@ -8,8 +8,5 @@ dependencies = [
     "python-dotenv",
 ]
 
-[tool.vercel]
-entrypoint = "api.index:handler"
-
 [tool.pytest.ini_options]
 pythonpath = ["."]
