@@ -1,5 +1,6 @@
 # Environment / secrets
 .env
+!frontend/api/.env
 
 # Python
 __pycache__/
