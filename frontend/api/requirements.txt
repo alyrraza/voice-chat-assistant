@@ -1,3 +1,2 @@
 groq
 requests
-python-dotenv

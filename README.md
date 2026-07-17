@@ -40,24 +40,24 @@ React/Vercel flavor (live):
                             POST /api/index?action=speak {text} ──▶ Deepgram TTS ──▶ 🔊
 ```
 
-`api/index.py` is Vercel's single required Python entrypoint (declared in
-`pyproject.toml`) — it routes internally by the `action` query param rather
-than being three separate files, since Vercel's Python runtime only allows
-one entrypoint per project.
-
-Both flavors share the same `services/` package — no duplicated logic:
+`frontend/api/index.py` is the Vercel Python serverless function — it lives
+*inside* `frontend/` (Vercel's Root Directory for this project) so it
+deploys correctly regardless of monorepo routing quirks, and is
+deliberately self-contained (no import from the repo-root `services/`
+package) so it has zero cross-directory dependencies. It routes internally
+by the `action` query param rather than being three separate files.
 
 | File | Responsibility | Used by |
 |---|---|---|
-| `services/config.py` | Loads API keys/settings from env | both |
+| `services/config.py` | Loads API keys/settings from env | Streamlit |
 | `services/stt.py` | Mic capture + streaming speech-to-text | Streamlit |
-| `services/stt_batch.py` | Prerecorded speech-to-text (no mic access needed) | Vercel API |
-| `services/llm.py` | Chat completion via Groq | both |
-| `services/tts.py` | Text-to-speech via Deepgram | both |
-| `services/retry.py` | Retry-with-backoff decorator for flaky external calls | both |
+| `services/stt_batch.py` | Prerecorded speech-to-text (no mic access needed) | Streamlit (reference) |
+| `services/llm.py` | Chat completion via Groq | Streamlit |
+| `services/tts.py` | Text-to-speech via Deepgram | Streamlit |
+| `services/retry.py` | Retry-with-backoff decorator for flaky external calls | Streamlit |
 | `services/logging_config.py` | One-line structured logging setup | Streamlit |
 | `app.py` | Streamlit UI | Streamlit flavor |
-| `api/index.py` | Vercel Python serverless entrypoint (chat/transcribe/speak routes) | Web flavor |
+| `frontend/api/index.py` | Self-contained Vercel Python function (chat/transcribe/speak routes) | Web flavor |
 | `frontend/` | Vite + React UI | Web flavor |
 
 ## Run locally (Streamlit flavor)
@@ -98,17 +98,20 @@ npm run dev
 
 Voice recording needs the `/api/*` endpoints, so for a fully working local
 preview use the [Vercel CLI](https://vercel.com/docs/cli)'s `vercel dev`
-from the project root instead — it runs the React app and the Python
-functions together.
+from inside `frontend/` instead — it runs the React app and the Python
+function together.
 
 ## Deploy the React flavor on Vercel
 
 1. Go to [vercel.com/new](https://vercel.com/new) and import this GitHub repo.
-2. In **Project Settings → Environment Variables**, add `DEEPGRAM_API_KEY`
+2. In **Project Settings → General → Root Directory**, set it to `frontend`.
+   This is required — `frontend/` has its own `package.json` (for the Vite
+   build) and `frontend/api/index.py` (the serverless function), and Vercel
+   needs Root Directory pointed there to pick both up automatically.
+3. In **Project Settings → Environment Variables**, add `DEEPGRAM_API_KEY`
    and `GROQ_API_KEY` (same keys as your local `.env`).
-3. Deploy — `vercel.json` at the repo root tells Vercel to build
-   `frontend/` and serve `api/*.py` as Python serverless functions on the
-   same domain.
+4. Deploy — no `vercel.json` needed; Vercel auto-detects the Vite frontend
+   and the Python function once Root Directory is set correctly.
 
 ## Running tests
 

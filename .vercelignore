@@ -1,6 +1,0 @@
-app.py
-legacy/
-tests/
-.venv/
-.github/
-requirements-dev.txt
